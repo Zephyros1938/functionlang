@@ -1,2 +1,2 @@
-build/test.o: src/test.cpp src/functionlang.hpp
-src/functionlang.hpp:
+build/test.o: src/test.cpp include/functionlang.hpp
+include/functionlang.hpp:

@@ -3,10 +3,16 @@
 #include <cctype>
 #include <cmath>
 #include <functional>
+#include <iostream>
+#include <limits>
+#include <vector>
 
 namespace functionlang {
 
-const char VERSION[] = "0.2.1";
+const char VERSION[] = "0.3.1";
+const char VERSIONTEXT[] = "i added summations and product, ts so peak";
+
+const size_t INTERNAL_VARIABLE_START = 256;
 
 enum UNARY_OPS_ENUM {
   LOG = 'l',
@@ -38,6 +44,7 @@ enum BINARY_OPS_ENUM {
   ROUND = '~'
 };
 enum TERNARY_OPS_ENUM { WHETHER = '?' };
+enum QUATERNARY_OPS_ENUM { SUMMATION = 'A', PRODUCT = 'P' };
 
 const char UNARY_OPS[] = {
     UNARY_OPS_ENUM::LOG,  UNARY_OPS_ENUM::LOG2, UNARY_OPS_ENUM::LOG10,
@@ -51,6 +58,8 @@ const char BINARY_OPS[] = {
     BINARY_OPS_ENUM::L_AND, BINARY_OPS_ENUM::L_OR,  BINARY_OPS_ENUM::MOD,
     BINARY_OPS_ENUM::ROUND};
 const char TERNARY_OPS[] = {TERNARY_OPS_ENUM::WHETHER};
+const char QUATERNARY_OPS[] = {QUATERNARY_OPS_ENUM::SUMMATION,
+                               QUATERNARY_OPS_ENUM::PRODUCT};
 
 using ExprFuncRet = const std::vector<double> &;
 using ExprFunc = std::function<double(ExprFuncRet)>;
@@ -63,7 +72,7 @@ const ExprFunc parseExpression(const char *&ptr) {
     ptr++;
   char op = *ptr++;
 
-  if (op == 'V') {
+  if (op == '$') {
     // Parse the index number immediately following 'V'
     char *endPtr;
     int index = static_cast<int>(std::strtol(ptr, &endPtr, 10));
@@ -72,13 +81,23 @@ const ExprFunc parseExpression(const char *&ptr) {
     ptr = endPtr;
 
     return [index](ExprFuncRet args) {
-      // Safety check: ensure index exists in the provided vector
       if (index >= 0 && static_cast<size_t>(index) < args.size()) {
         return args[index];
       }
-      return 0.0; // Default if index is out of bounds
+      return 0.0;
     };
   }
+  if (op == '@') { // internal non-user set variables
+    char *endPtr;
+    int depth = static_cast<int>(std::strtol(ptr, &endPtr, 10));
+    ptr = endPtr;
+
+    return [depth](ExprFuncRet args) {
+      size_t internalIndex = INTERNAL_VARIABLE_START + depth;
+      return (internalIndex < args.size()) ? args[internalIndex] : 0.0;
+    };
+  }
+
   if (std::isdigit(op) || op == '.' || op == '-') {
     ptr--;
     float val = strtof(ptr, const_cast<char **>(&ptr));
@@ -151,7 +170,7 @@ const ExprFunc parseExpression(const char *&ptr) {
       case BINARY_OPS_ENUM::L_OR:
         return (v1 > 0.0) || (v2 > 0.0) ? 1.0 : -1.0;
       case BINARY_OPS_ENUM::MOD:
-        return v2 = 0.0 ? 0.0 : std::fmod(v1, v2);
+        return v2 == 0.0 ? 0.0 : std::fmod(v1, v2);
       case BINARY_OPS_ENUM::ROUND: {
         auto n = std::pow(10.0, v2);
         return std::round(v1 * n) / n;
@@ -174,6 +193,64 @@ const ExprFunc parseExpression(const char *&ptr) {
       switch (op) {
       case TERNARY_OPS_ENUM::WHETHER:
         return v1 > 0.0 ? v2 : v3;
+      default:
+        return 0.0;
+      };
+    };
+  } else if (std::ranges::contains(QUATERNARY_OPS, op)) {
+    if (*ptr == ',')
+      ptr++;
+    auto arg2 = parseExpression(ptr);
+    if (*ptr == ',')
+      ptr++;
+    auto arg3 = parseExpression(ptr);
+    if (*ptr == ',')
+      ptr++;
+    auto arg4 = parseExpression(ptr);
+
+    return [arg1, arg2, arg3, arg4, op](ExprFuncRet args) {
+      auto v1 = arg1(args);
+      auto v2 = arg2(args);
+      auto v3 = arg3(args);
+      switch (op) {
+      case QUATERNARY_OPS_ENUM::SUMMATION:
+      case QUATERNARY_OPS_ENUM::PRODUCT: {
+        double total = (op == QUATERNARY_OPS_ENUM::SUMMATION) ? 0.0 : 1.0;
+
+        std::vector<double> localArgs = args;
+
+        // 1. Automatic Slot Detection
+        // If v3 is negative, find the first 'unused' slot.
+        // Otherwise, use the slot the user provided.
+        int slot = static_cast<int>(v3);
+        if (slot < 0) {
+          slot = 0;
+          // Ensure space for at least 10 internal slots
+          if (localArgs.size() < INTERNAL_VARIABLE_START + 10)
+            localArgs.resize(INTERNAL_VARIABLE_START + 10,
+                             -std::numeric_limits<double>::max());
+
+          while (slot < 10 && localArgs[INTERNAL_VARIABLE_START + slot] !=
+                                  -std::numeric_limits<double>::max()) {
+            slot++;
+          }
+        }
+
+        size_t internalIndex = INTERNAL_VARIABLE_START + slot;
+        if (localArgs.size() <= internalIndex)
+          localArgs.resize(internalIndex + 1,
+                           -std::numeric_limits<double>::max());
+
+        // 2. The Loop
+        for (double i = v1; i <= v2; ++i) {
+          localArgs[internalIndex] = i;
+          if (op == QUATERNARY_OPS_ENUM::SUMMATION)
+            total += arg4(localArgs);
+          else
+            total *= arg4(localArgs);
+        }
+        return total;
+      }
       default:
         return 0.0;
       };

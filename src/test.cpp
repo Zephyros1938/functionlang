@@ -70,7 +70,7 @@ int main() {
   std::vector<double> values;
   values.resize(256, 0.0);
 
-  std::cout << ":q to exit | :h for help | :s V[n] [expr] | V[0-255] to index "
+  std::cout << ":q to exit | :h for help | :s $[n] [expr] | $[0-255] to index "
                "value store"
             << std::endl;
 
@@ -85,7 +85,7 @@ int main() {
     }
     if (input_buffer.starts_with(":s")) {
       try {
-        size_t v_pos = input_buffer.find('V');
+        size_t v_pos = input_buffer.find('$');
         size_t space_pos = input_buffer.find(' ', v_pos);
         if (v_pos != std::string::npos && space_pos != std::string::npos) {
           int index =
@@ -95,7 +95,7 @@ int main() {
           double result = functionlang::parseExpression(cs)({10, 5});
           if (index >= 0 && index < (int)values.size()) {
             values[index] = result;
-            std::cout << "V" << index << " = " << result << std::endl;
+            std::cout << "$" << index << " = " << result << std::endl;
           } else {
             std::cerr << Color::Red << "Error: Index V" << index
                       << " out of range." << Color::Reset << std::endl;
