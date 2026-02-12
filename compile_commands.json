@@ -1,0 +1,20 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-std=c++23",
+      "-Wall",
+      "-Wextra",
+      "-Wpedantic",
+      "-Iinclude",
+      "-g",
+      "-c",
+      "-o",
+      "build/test.o",
+      "src/test.cpp"
+    ],
+    "directory": "/home/zeph/Coding/functionlang",
+    "file": "/home/zeph/Coding/functionlang/src/test.cpp",
+    "output": "/home/zeph/Coding/functionlang/build/test.o"
+  }
+]
