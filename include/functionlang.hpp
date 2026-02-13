@@ -3,14 +3,13 @@
 #include <cctype>
 #include <cmath>
 #include <functional>
-#include <iostream>
 #include <limits>
 #include <vector>
 
 namespace functionlang {
 
-const char VERSION[] = "0.3.1";
-const char VERSIONTEXT[] = "i added summations and product, ts so peak";
+const char VERSION[] = "0.4.0";
+const char VERSIONTEXT[] = "more functions (took too long to code :sob:)";
 
 const size_t INTERNAL_VARIABLE_START = 256;
 
@@ -18,10 +17,10 @@ enum UNARY_OPS_ENUM {
   LOG = 'l',
   LOG2 = 'L',
   LOG10 = 'g',
-  SQRT = 's',
-  CBRT = 'S',
-  SIN = 'i',
-  COS = 'I',
+  SQRT = 'c',
+  CBRT = 'C',
+  SIN = 's',
+  COS = 'S',
   ABS = 'a',
   NOT = '!'
 };
@@ -45,6 +44,7 @@ enum BINARY_OPS_ENUM {
 };
 enum TERNARY_OPS_ENUM { WHETHER = '?' };
 enum QUATERNARY_OPS_ENUM { SUMMATION = 'A', PRODUCT = 'P' };
+enum PENTARY_OPS_ENUM { INTEGRAL = 'I' };
 
 const char UNARY_OPS[] = {
     UNARY_OPS_ENUM::LOG,  UNARY_OPS_ENUM::LOG2, UNARY_OPS_ENUM::LOG10,
@@ -60,6 +60,7 @@ const char BINARY_OPS[] = {
 const char TERNARY_OPS[] = {TERNARY_OPS_ENUM::WHETHER};
 const char QUATERNARY_OPS[] = {QUATERNARY_OPS_ENUM::SUMMATION,
                                QUATERNARY_OPS_ENUM::PRODUCT};
+const char PENTARY_OPS[] = {PENTARY_OPS_ENUM::INTEGRAL};
 
 using ExprFuncRet = const std::vector<double> &;
 using ExprFunc = std::function<double(ExprFuncRet)>;
@@ -68,7 +69,7 @@ const ExprFunc parseExpression(const char *&ptr) {
   if (ptr == nullptr || *ptr == '\0') {
     return [](ExprFuncRet) { return 0.0f; };
   }
-  while (ptr && (*ptr == ' ' || *ptr == '\t'))
+  while (ptr && (*ptr == ' ' || *ptr == '\t' || *ptr == '(' || *ptr == ')'))
     ptr++;
   char op = *ptr++;
 
@@ -254,6 +255,72 @@ const ExprFunc parseExpression(const char *&ptr) {
       default:
         return 0.0;
       };
+    };
+  } else if (std::ranges::contains(PENTARY_OPS, op)) {
+    if (*ptr == ',')
+      ptr++;
+    auto arg2 = parseExpression(ptr);
+    if (*ptr == ',')
+      ptr++;
+    auto arg3 = parseExpression(ptr);
+    if (*ptr == ',')
+      ptr++;
+    auto arg4 = parseExpression(ptr);
+    if (*ptr == ',')
+      ptr++;
+    auto arg5 = parseExpression(ptr);
+
+    return [arg1, arg2, arg3, arg4, arg5, op](ExprFuncRet args) {
+      double v1 = arg1(args);
+      double v2 = arg2(args);
+      double v3 = arg3(args);
+      double v4 = arg4(args);
+
+      switch (op) {
+      case PENTARY_OPS_ENUM::INTEGRAL: {
+        double a = v1;
+        double b = v2;
+        int n = static_cast<int>(v3);
+        int requestedSlot = static_cast<int>(v4);
+
+        if (n <= 0)
+          return 0.0;
+
+        std::vector<double> localArgs = args;
+
+        // --- AUTO-SLOT DETECTION ---
+        int slot = requestedSlot;
+        if (slot < 0) {
+          slot = 0;
+          // Ensure room for internal iterators
+          if (localArgs.size() < INTERNAL_VARIABLE_START + 10)
+            localArgs.resize(INTERNAL_VARIABLE_START + 10,
+                             -std::numeric_limits<double>::max());
+
+          while (slot < 10 && localArgs[INTERNAL_VARIABLE_START + slot] !=
+                                  -std::numeric_limits<double>::max()) {
+            slot++;
+          }
+        }
+        size_t internalIndex = INTERNAL_VARIABLE_START + slot;
+        if (localArgs.size() <= internalIndex)
+          localArgs.resize(internalIndex + 1,
+                           -std::numeric_limits<double>::max());
+        // ---------------------------
+
+        double total = 0.0;
+        double dx = (b - a) / n;
+
+        for (int i = 0; i < n; ++i) {
+          // Midpoint Rule: x = a + (i + 0.5) * dx
+          localArgs[internalIndex] = a + (i + 0.5) * dx;
+          total += arg5(localArgs);
+        }
+        return total * dx;
+      }
+      default:
+        return 0.0;
+      }
     };
   }
 
