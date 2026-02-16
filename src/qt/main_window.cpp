@@ -12,7 +12,9 @@ MyWindow::MyWindow(QWidget *parent) : QMainWindow(parent) {
   setupUi();
   setupConnections();
 
-  setWindowTitle("FunctionLang IDE");
+  setWindowTitle(std::format("FunctionLang Gui Editor {} - {}",
+                             functionlang::VERSION, functionlang::VERSIONTEXT)
+                     .c_str());
   resize(1000, 600);
   statusBar()->showMessage("Ready");
 }
