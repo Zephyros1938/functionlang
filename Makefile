@@ -1,8 +1,8 @@
 # ==========================================
 # Project Settings
 # ==========================================
-TARGET_CLI    := functionlang
-TARGET_QT     := functionlang-qt
+TARGET_CLI    := functionlang.out
+TARGET_QT     := functionlang-qt.out
 SRC_DIR       := src
 BUILD_DIR     := build
 INCLUDE_DIR   := include

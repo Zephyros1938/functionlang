@@ -1,0 +1,7 @@
+*.out
+*.o
+*/**.o
+*/**.out
+build/*/**
+build/*
+build
