@@ -21,11 +21,9 @@ const std::string Bold = "\033[1m";
 
 std::ifstream file("assets/help.txt");
 
-// 2. Load the string (Note: we pass the 'file' object, not a temporary)
 std::string raw_help{std::istreambuf_iterator<char>(file),
                      std::istreambuf_iterator<char>()};
 
-// 3. C++23 Formatting with a runtime string
 std::string help_string =
     std::vformat(raw_help, std::make_format_args(functionlang::VERSION,
                                                  functionlang::VERSIONTEXT));

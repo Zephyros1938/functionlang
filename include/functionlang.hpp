@@ -8,10 +8,12 @@
 
 namespace functionlang {
 
-const char VERSION[] = "0.4.0";
-const char VERSIONTEXT[] = "more functions (took too long to code :sob:)";
+const char VERSION[] = "0.4.1";
+const char VERSIONTEXT[] = "I added factorials (use f[$0] for it) and pi";
 
 const size_t INTERNAL_VARIABLE_START = 256;
+
+enum CONSTS_ENUM { PI = 'p' };
 
 enum UNARY_OPS_ENUM {
   LOG = 'l',
@@ -22,7 +24,8 @@ enum UNARY_OPS_ENUM {
   SIN = 's',
   COS = 'S',
   ABS = 'a',
-  NOT = '!'
+  NOT = '!',
+  FACTORIAL = 'f'
 };
 enum BINARY_OPS_ENUM {
   MUL = '*',
@@ -46,10 +49,12 @@ enum TERNARY_OPS_ENUM { WHETHER = '?' };
 enum QUATERNARY_OPS_ENUM { SUMMATION = 'A', PRODUCT = 'P' };
 enum PENTARY_OPS_ENUM { INTEGRAL = 'I' };
 
-const char UNARY_OPS[] = {
-    UNARY_OPS_ENUM::LOG,  UNARY_OPS_ENUM::LOG2, UNARY_OPS_ENUM::LOG10,
-    UNARY_OPS_ENUM::SQRT, UNARY_OPS_ENUM::CBRT, UNARY_OPS_ENUM::SIN,
-    UNARY_OPS_ENUM::COS,  UNARY_OPS_ENUM::ABS,  UNARY_OPS_ENUM::NOT};
+const char CONSTS[] = {CONSTS_ENUM::PI};
+const char UNARY_OPS[] = {UNARY_OPS_ENUM::LOG,   UNARY_OPS_ENUM::LOG2,
+                          UNARY_OPS_ENUM::LOG10, UNARY_OPS_ENUM::SQRT,
+                          UNARY_OPS_ENUM::CBRT,  UNARY_OPS_ENUM::SIN,
+                          UNARY_OPS_ENUM::COS,   UNARY_OPS_ENUM::ABS,
+                          UNARY_OPS_ENUM::NOT,   UNARY_OPS_ENUM::FACTORIAL};
 const char BINARY_OPS[] = {
     BINARY_OPS_ENUM::MUL,   BINARY_OPS_ENUM::DIV,   BINARY_OPS_ENUM::ADD,
     BINARY_OPS_ENUM::SUB,   BINARY_OPS_ENUM::POW,   BINARY_OPS_ENUM::MIN,
@@ -74,7 +79,7 @@ const ExprFunc parseExpression(const char *&ptr) {
   char op = *ptr++;
 
   if (op == '$') {
-    // Parse the index number immediately following 'V'
+    // Parse the index number immediately following '$'
     char *endPtr;
     int index = static_cast<int>(std::strtol(ptr, &endPtr, 10));
 
@@ -104,11 +109,23 @@ const ExprFunc parseExpression(const char *&ptr) {
     float val = strtof(ptr, const_cast<char **>(&ptr));
     return [val](ExprFuncRet) { return val; };
   }
+
+  if (std::ranges::contains(CONSTS, op)) {
+    return [op](ExprFuncRet args) {
+      switch (op) {
+      case CONSTS_ENUM::PI:
+        return M_PI;
+      default:
+        return 0.0;
+      };
+    };
+  }
+
   auto arg1 = parseExpression(ptr);
 
   if (std::ranges::contains(UNARY_OPS, op)) {
     return [arg1, op](ExprFuncRet args) {
-      float v1 = arg1(args);
+      auto v1 = arg1(args);
       switch (op) {
       case UNARY_OPS_ENUM::LOG:
         return std::log(v1);
@@ -127,9 +144,14 @@ const ExprFunc parseExpression(const char *&ptr) {
       case UNARY_OPS_ENUM::ABS:
         return std::abs(v1);
       case UNARY_OPS_ENUM::NOT:
-        return v1 <= 0.0f ? 1.0f : -1.0f;
+        return v1 <= 0.0 ? 1.0 : -1.0;
+      case UNARY_OPS_ENUM::FACTORIAL:
+        return (v1 < 0.0 ? 0.0
+                : v1 >= 170.624382019042968749
+                    ? std::numeric_limits<double>::max()
+                    : std::tgamma(v1 + 1.0));
       default:
-        return 0.0f;
+        return 0.0;
       };
     };
   } else if (std::ranges::contains(BINARY_OPS, op)) {
@@ -220,9 +242,9 @@ const ExprFunc parseExpression(const char *&ptr) {
 
         std::vector<double> localArgs = args;
 
-        // 1. Automatic Slot Detection
-        // If v3 is negative, find the first 'unused' slot.
-        // Otherwise, use the slot the user provided.
+        // Sutomatic Slot Detection
+        // If v3 is negative, find the first unused slot, else use the user
+        // provided slot
         int slot = static_cast<int>(v3);
         if (slot < 0) {
           slot = 0;
@@ -242,7 +264,6 @@ const ExprFunc parseExpression(const char *&ptr) {
           localArgs.resize(internalIndex + 1,
                            -std::numeric_limits<double>::max());
 
-        // 2. The Loop
         for (double i = v1; i <= v2; ++i) {
           localArgs[internalIndex] = i;
           if (op == QUATERNARY_OPS_ENUM::SUMMATION)
@@ -288,11 +309,10 @@ const ExprFunc parseExpression(const char *&ptr) {
 
         std::vector<double> localArgs = args;
 
-        // --- AUTO-SLOT DETECTION ---
         int slot = requestedSlot;
         if (slot < 0) {
           slot = 0;
-          // Ensure room for internal iterators
+
           if (localArgs.size() < INTERNAL_VARIABLE_START + 10)
             localArgs.resize(INTERNAL_VARIABLE_START + 10,
                              -std::numeric_limits<double>::max());
@@ -306,13 +326,12 @@ const ExprFunc parseExpression(const char *&ptr) {
         if (localArgs.size() <= internalIndex)
           localArgs.resize(internalIndex + 1,
                            -std::numeric_limits<double>::max());
-        // ---------------------------
 
         double total = 0.0;
         double dx = (b - a) / n;
 
         for (int i = 0; i < n; ++i) {
-          // Midpoint Rule: x = a + (i + 0.5) * dx
+          // midpoint: x = a + (i + 0.5) * dx
           localArgs[internalIndex] = a + (i + 0.5) * dx;
           total += arg5(localArgs);
         }
