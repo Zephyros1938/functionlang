@@ -8,12 +8,16 @@
 
 namespace functionlang {
 
-const char VERSION[] = "0.4.1";
-const char VERSIONTEXT[] = "I added factorials (use f[$0] for it) and pi";
+const char VERSION[] = "0.4.2";
+const char VERSIONTEXT[] =
+    "Default result should now be -std::numeric_limits<double>::max() and i "
+    "added euler's number";
 
 const size_t INTERNAL_VARIABLE_START = 256;
 
-enum CONSTS_ENUM { PI = 'p' };
+const double DEFAULT_RESULT = -std::numeric_limits<double>::max();
+
+enum CONSTS_ENUM { PI = 'p', EULER = 'e' };
 
 enum UNARY_OPS_ENUM {
   LOG = 'l',
@@ -49,7 +53,7 @@ enum TERNARY_OPS_ENUM { WHETHER = '?' };
 enum QUATERNARY_OPS_ENUM { SUMMATION = 'A', PRODUCT = 'P' };
 enum PENTARY_OPS_ENUM { INTEGRAL = 'I' };
 
-const char CONSTS[] = {CONSTS_ENUM::PI};
+const char CONSTS[] = {CONSTS_ENUM::PI, CONSTS_ENUM::EULER};
 const char UNARY_OPS[] = {UNARY_OPS_ENUM::LOG,   UNARY_OPS_ENUM::LOG2,
                           UNARY_OPS_ENUM::LOG10, UNARY_OPS_ENUM::SQRT,
                           UNARY_OPS_ENUM::CBRT,  UNARY_OPS_ENUM::SIN,
@@ -90,7 +94,7 @@ const ExprFunc parseExpression(const char *&ptr) {
       if (index >= 0 && static_cast<size_t>(index) < args.size()) {
         return args[index];
       }
-      return 0.0;
+      return DEFAULT_RESULT;
     };
   }
   if (op == '@') { // internal non-user set variables
@@ -100,7 +104,8 @@ const ExprFunc parseExpression(const char *&ptr) {
 
     return [depth](ExprFuncRet args) {
       size_t internalIndex = INTERNAL_VARIABLE_START + depth;
-      return (internalIndex < args.size()) ? args[internalIndex] : 0.0;
+      return (internalIndex < args.size()) ? args[internalIndex]
+                                           : DEFAULT_RESULT;
     };
   }
 
@@ -111,12 +116,14 @@ const ExprFunc parseExpression(const char *&ptr) {
   }
 
   if (std::ranges::contains(CONSTS, op)) {
-    return [op](ExprFuncRet args) {
+    return [op](ExprFuncRet _) {
       switch (op) {
       case CONSTS_ENUM::PI:
         return M_PI;
+      case CONSTS_ENUM::EULER:
+        return M_E;
       default:
-        return 0.0;
+        return DEFAULT_RESULT;
       };
     };
   }
@@ -151,7 +158,7 @@ const ExprFunc parseExpression(const char *&ptr) {
                     ? std::numeric_limits<double>::max()
                     : std::tgamma(v1 + 1.0));
       default:
-        return 0.0;
+        return DEFAULT_RESULT;
       };
     };
   } else if (std::ranges::contains(BINARY_OPS, op)) {
@@ -199,7 +206,7 @@ const ExprFunc parseExpression(const char *&ptr) {
         return std::round(v1 * n) / n;
       }
       default:
-        return 0.0;
+        return DEFAULT_RESULT;
       };
     };
   } else if (std::ranges::contains(TERNARY_OPS, op)) {
@@ -217,7 +224,7 @@ const ExprFunc parseExpression(const char *&ptr) {
       case TERNARY_OPS_ENUM::WHETHER:
         return v1 > 0.0 ? v2 : v3;
       default:
-        return 0.0;
+        return DEFAULT_RESULT;
       };
     };
   } else if (std::ranges::contains(QUATERNARY_OPS, op)) {
@@ -274,7 +281,7 @@ const ExprFunc parseExpression(const char *&ptr) {
         return total;
       }
       default:
-        return 0.0;
+        return DEFAULT_RESULT;
       };
     };
   } else if (std::ranges::contains(PENTARY_OPS, op)) {
@@ -338,11 +345,11 @@ const ExprFunc parseExpression(const char *&ptr) {
         return total * dx;
       }
       default:
-        return 0.0;
+        return DEFAULT_RESULT;
       }
     };
   }
 
-  return [](ExprFuncRet) { return 0.0f; };
+  return [](ExprFuncRet) { return DEFAULT_RESULT; };
 }
 } // namespace functionlang

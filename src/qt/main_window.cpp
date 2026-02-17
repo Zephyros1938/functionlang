@@ -1,5 +1,7 @@
 #include "main_window.hpp"
 #include "qcontainerfwd.h"
+#include "qobject.h"
+#include "qtablewidget.h"
 #include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -7,6 +9,8 @@
 #include <QVBoxLayout>
 #include <format>
 #include <functionlang.hpp>
+#include <iostream>
+#include <limits>
 
 MyWindow::MyWindow(QWidget *parent) : QMainWindow(parent) {
   setupUi();
@@ -17,6 +21,8 @@ MyWindow::MyWindow(QWidget *parent) : QMainWindow(parent) {
                      .c_str());
   resize(1000, 600);
   statusBar()->showMessage("Ready");
+  functionlangArgs.resize(functionlang::INTERNAL_VARIABLE_START,
+                          -std::numeric_limits<double>::max());
 }
 
 void MyWindow::setupUi() {
@@ -52,14 +58,9 @@ void MyWindow::setupUi() {
   leftLayout->addStretch(); // Pushes elements to the top
 
   // ---  Variables Table ---
-  varTable = new QTableWidget(0, 2);
-  varTable->setHorizontalHeaderLabels({"Variable", "Value"});
+  varTable = new QTableWidget(functionlang::INTERNAL_VARIABLE_START, 1);
+  varTable->setHorizontalHeaderLabels({"Value"});
   varTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-
-  // TODO: make this actually work, instead of dummy
-  varTable->insertRow(0);
-  varTable->setItem(0, 0, new QTableWidgetItem("x"));
-  varTable->setItem(0, 1, new QTableWidgetItem("10"));
 
   splitter->addWidget(leftWidget);
   splitter->addWidget(varTable);
@@ -76,13 +77,13 @@ void MyWindow::setupConnections() {
   connect(equationInput, &QLineEdit::textChanged, this,
           &MyWindow::onTextChanged);
   connect(liveButton, &QPushButton::toggled, this, &MyWindow::toggleLiveMode);
+  connect(varTable, &QTableWidget::itemChanged, this,
+          &MyWindow::handleVarTableChange);
 }
 
 void MyWindow::onTextChanged(const QString &text) {
-  if (text.contains("!")) {
-    equationInput->setStyleSheet(
-        "background-color: #FFCCCC; color: black; border: 1px solid red;");
-    statusBar()->showMessage("Syntax Error: Illegal character '!'");
+  if (0) {
+
   } else {
     equationInput->setStyleSheet(
         "background-color: white; color: black; border: 1px solid gray;");
@@ -101,7 +102,8 @@ void MyWindow::handleCalculate() {
 
   auto expr = expression.toStdString();
   const char *expr_cstr = expr.c_str();
-  const double evaluated = functionlang::parseExpression(expr_cstr)({1});
+  const double evaluated =
+      functionlang::parseExpression(expr_cstr)(functionlangArgs);
   statusBar()->showMessage(QString::fromStdString(std::format("{}", evaluated)),
                            -1);
 }
@@ -109,9 +111,24 @@ void MyWindow::handleCalculate() {
 void MyWindow::toggleLiveMode(bool checked) {
   isLiveMode = checked;
   if (isLiveMode) {
-    statusBar()->showMessage("Live Mode: ON", 2000);
+    statusBar()->showMessage("Live Mode: ON", -1);
     handleCalculate();
   } else {
-    statusBar()->showMessage("Live Mode: OFF", 2000);
+    statusBar()->showMessage("Live Mode: OFF", -1);
   }
+}
+
+void MyWindow::handleVarTableChange(QTableWidgetItem *item) {
+  int row = item->row();
+  int col = item->column();
+  QString text = item->text();
+
+  std::cout << row << ":" << col << " " << text.toStdString() << std::endl;
+  functionlangArgs[row] = text.toDouble();
+  auto expr = equationInput->text().toStdString();
+  auto expr_cstr = expr.c_str();
+  const double evaluated =
+      functionlang::parseExpression(expr_cstr)(functionlangArgs);
+  statusBar()->showMessage(QString::fromStdString(std::format("{}", evaluated)),
+                           -1);
 }

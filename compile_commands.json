@@ -1,8 +1,7 @@
 [
   {
-    "file": "src/qt/main.cpp",
     "arguments": [
-      "g++",
+      "/usr/bin/g++",
       "-std=c++23",
       "-Wall",
       "-Wextra",
@@ -10,28 +9,26 @@
       "-Iinclude",
       "-g",
       "-fPIC",
-      "-I/usr/include/qt6/QtWidgets",
-      "-I/usr/include/qt6",
+      "-I/usr/include/x86_64-linux-gnu/qt6/QtWidgets",
+      "-I/usr/include/x86_64-linux-gnu/qt6",
       "-DQT_WIDGETS_LIB",
-      "-I/usr/include/qt6/QtGui",
+      "-I/usr/include/x86_64-linux-gnu/qt6/QtCore",
+      "-I/usr/lib/x86_64-linux-gnu/qt6/mkspecs/linux-g++",
+      "-I/usr/include/x86_64-linux-gnu/qt6/QtGui",
       "-DQT_GUI_LIB",
-      "-I/usr/include/qt6/QtCore",
       "-DQT_CORE_LIB",
-      "-I/usr/lib/qt6/mkspecs/linux-g++",
-      "-MMD",
-      "-MP",
       "-c",
-      "src/qt/main.cpp",
       "-o",
-      "build/qt/main.o"
+      "build/qt/main.o",
+      "src/qt/main.cpp"
     ],
     "directory": "/home/zeph/Coding/functionlang",
-    "output": "build/qt/main.o"
+    "file": "/home/zeph/Coding/functionlang/src/qt/main.cpp",
+    "output": "/home/zeph/Coding/functionlang/build/qt/main.o"
   },
   {
-    "file": "src/qt/main_window.cpp",
     "arguments": [
-      "g++",
+      "/usr/bin/g++",
       "-std=c++23",
       "-Wall",
       "-Wextra",
@@ -39,49 +36,21 @@
       "-Iinclude",
       "-g",
       "-fPIC",
-      "-I/usr/include/qt6/QtWidgets",
-      "-I/usr/include/qt6",
+      "-I/usr/include/x86_64-linux-gnu/qt6/QtWidgets",
+      "-I/usr/include/x86_64-linux-gnu/qt6",
       "-DQT_WIDGETS_LIB",
-      "-I/usr/include/qt6/QtGui",
+      "-I/usr/include/x86_64-linux-gnu/qt6/QtCore",
+      "-I/usr/lib/x86_64-linux-gnu/qt6/mkspecs/linux-g++",
+      "-I/usr/include/x86_64-linux-gnu/qt6/QtGui",
       "-DQT_GUI_LIB",
-      "-I/usr/include/qt6/QtCore",
       "-DQT_CORE_LIB",
-      "-I/usr/lib/qt6/mkspecs/linux-g++",
-      "-MMD",
-      "-MP",
       "-c",
-      "src/qt/main_window.cpp",
       "-o",
-      "build/qt/main_window.o"
+      "build/qt/main_window.o",
+      "src/qt/main_window.cpp"
     ],
     "directory": "/home/zeph/Coding/functionlang",
-    "output": "build/qt/main_window.o"
-  },
-  {
-    "file": "build/moc_main_window.cpp",
-    "arguments": [
-      "g++",
-      "-std=c++23",
-      "-Wall",
-      "-Wextra",
-      "-Wpedantic",
-      "-Iinclude",
-      "-g",
-      "-fPIC",
-      "-I/usr/include/qt6/QtWidgets",
-      "-I/usr/include/qt6",
-      "-DQT_WIDGETS_LIB",
-      "-I/usr/include/qt6/QtGui",
-      "-DQT_GUI_LIB",
-      "-I/usr/include/qt6/QtCore",
-      "-DQT_CORE_LIB",
-      "-I/usr/lib/qt6/mkspecs/linux-g++",
-      "-c",
-      "build/moc_main_window.cpp",
-      "-o",
-      "build/moc_main_window.o"
-    ],
-    "directory": "/home/zeph/Coding/functionlang",
-    "output": "build/moc_main_window.o"
+    "file": "/home/zeph/Coding/functionlang/src/qt/main_window.cpp",
+    "output": "/home/zeph/Coding/functionlang/build/qt/main_window.o"
   }
 ]
