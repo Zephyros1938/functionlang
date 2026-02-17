@@ -2,8 +2,11 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdint>
+#include <cstdlib>
 #include <functional>
 #include <limits>
+#include <string>
 #include <vector>
 
 namespace functionlang {
@@ -14,6 +17,10 @@ const char VERSIONTEXT[] =
     "added euler's number";
 
 const size_t INTERNAL_VARIABLE_START = 256;
+const char USER_VARIABLE_IDENT = '$';
+const char INTERNAL_VARIABLE_IDENT = '@';
+const char USER_FUNCTION_IDENT = '#';
+const double FACTORIAL_MAX = 170.624382019042968749;
 
 const double DEFAULT_RESULT = -std::numeric_limits<double>::max();
 
@@ -82,7 +89,7 @@ const ExprFunc parseExpression(const char *&ptr) {
     ptr++;
   char op = *ptr++;
 
-  if (op == '$') {
+  if (op == USER_VARIABLE_IDENT) {
     // Parse the index number immediately following '$'
     char *endPtr;
     int index = static_cast<int>(std::strtol(ptr, &endPtr, 10));
@@ -97,7 +104,7 @@ const ExprFunc parseExpression(const char *&ptr) {
       return DEFAULT_RESULT;
     };
   }
-  if (op == '@') { // internal non-user set variables
+  if (op == INTERNAL_VARIABLE_IDENT) { // internal non-user set variables
     char *endPtr;
     int depth = static_cast<int>(std::strtol(ptr, &endPtr, 10));
     ptr = endPtr;
@@ -153,10 +160,9 @@ const ExprFunc parseExpression(const char *&ptr) {
       case UNARY_OPS_ENUM::NOT:
         return v1 <= 0.0 ? 1.0 : -1.0;
       case UNARY_OPS_ENUM::FACTORIAL:
-        return (v1 < 0.0 ? 0.0
-                : v1 >= 170.624382019042968749
-                    ? std::numeric_limits<double>::max()
-                    : std::tgamma(v1 + 1.0));
+        return (v1 < 0.0              ? 0.0
+                : v1 >= FACTORIAL_MAX ? std::numeric_limits<double>::max()
+                                      : std::tgamma(v1 + 1.0));
       default:
         return DEFAULT_RESULT;
       };
@@ -352,4 +358,117 @@ const ExprFunc parseExpression(const char *&ptr) {
 
   return [](ExprFuncRet) { return DEFAULT_RESULT; };
 }
+
+// !!! V2 !!!
+
+enum class Op : uint8_t { PUSH_V, GET_V, ADD, MUL, DIV, HALT };
+
+class FunctionParserV2 {
+private:
+  const char *equation;
+  std::vector<Op> operations;
+  std::vector<double> constants;
+
+  void compileInstructions(const char *&ptr) {
+    while (*ptr == ' ' || *ptr == ',' || *ptr == '\t') {
+      ptr++;
+    }
+    if (*ptr == '\0')
+      return;
+    char op = *ptr++;
+
+    if (op == USER_VARIABLE_IDENT) {
+      char *endPtr;
+      uint8_t idx = static_cast<uint8_t>(std::strtol(ptr, &endPtr, 10));
+      ptr = endPtr;
+      operations.push_back(Op::GET_V);
+      operations.push_back(static_cast<Op>(idx));
+    } else if (std::isdigit(op) || (op == '-' && std::isdigit(*ptr))) {
+      ptr--;
+      char *endPtr;
+      double v = std::strtod(ptr, &endPtr);
+      ptr = endPtr;
+      constants.push_back(v);
+      operations.push_back(Op::PUSH_V);
+    } else {
+      if (std::ranges::contains(BINARY_OPS, op)) {
+        compileInstructions(ptr);
+        compileInstructions(ptr);
+        switch (op) {
+        case BINARY_OPS_ENUM::ADD:
+          operations.push_back(Op::ADD);
+          break;
+        case BINARY_OPS_ENUM::MUL:
+          operations.push_back(Op::MUL);
+          break;
+        case BINARY_OPS_ENUM::DIV:
+          operations.push_back(Op::DIV);
+          break;
+        }
+      }
+    }
+  };
+
+public:
+  FunctionParserV2(const char *eq) {
+    equation = eq;
+    compileInstructions(equation);
+  };
+
+  double eval(std::vector<double> args) {
+    std::vector<double> stack;
+    size_t cidx = 0;
+    size_t opidx = 0;
+    while (opidx < operations.size()) {
+      Op code = operations[opidx++];
+      switch (code) {
+      case Op::PUSH_V: {
+        stack.push_back(constants[cidx++]);
+        break;
+      }
+      case Op::GET_V: {
+        uint8_t vidx = static_cast<uint8_t>(operations[opidx++]);
+        stack.push_back(vidx < args.size() ? args[vidx] : 0.0);
+        break;
+      }
+      case Op::ADD: {
+        double b = stack.back();
+        stack.pop_back();
+        double a = stack.back();
+        stack.pop_back();
+        stack.push_back(a + b);
+        break;
+      }
+      case Op::MUL: {
+        double b = stack.back();
+        stack.pop_back();
+        double a = stack.back();
+        stack.pop_back();
+        stack.push_back(a * b);
+        break;
+      }
+      case Op::DIV: {
+        double b = stack.back();
+        stack.pop_back();
+        double a = stack.back();
+        stack.pop_back();
+        stack.push_back(a / b);
+        break;
+      }
+      case Op::HALT: {
+        return stack.empty() ? 0.0 : stack.back();
+      }
+      }
+    }
+    return stack.empty() ? 0.0 : stack.back();
+  }
+
+  std::vector<Op> getOperations() { return operations; }
+  std::vector<double> getConstants() { return constants; }
+  std::string getOperationsStr() {
+    return std::string(reinterpret_cast<const char *>(operations.data()),
+                       operations.size());
+  }
+};
+
 } // namespace functionlang
